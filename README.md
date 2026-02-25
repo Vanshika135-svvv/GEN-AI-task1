@@ -1,0 +1,2 @@
+GEN-AI-task1
+This project features a GPT-2 powered text engine integrated into a responsive Glassmorphism Bento UI. It utilizes dynamic length controls and Smart Trimming logic to generate polished, long-form content while maintaining real-time performance tracking for latency and word count.
