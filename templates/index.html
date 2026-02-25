@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo-GPT // High Capacity AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="bg-blur"></div>
+    
+    <div class="wrapper">
+        <header class="header">
+            <h1>NEO<span>GPT</span></h1>
+            <p>Task 01: High-Volume Text Generation</p>
+        </header>
+
+        <main class="bento-grid">
+            <div class="card input-card">
+                <div class="card-top">
+                    <span class="badge">SYSTEM PROMPT</span>
+                    <select id="textSize" class="size-picker" title="Choose output depth" aria-label="Select generation size">
+                        <option value="short">Short (Quick Snippet)</option>
+                        <option value="medium">Medium (Standard Flow)</option>
+                        <option value="long" selected>Long (Deep Generation)</option>
+                    </select>
+                </div>
+                <textarea id="userInput" placeholder="Describe the scene or topic in detail..."></textarea>
+                <div class="button-group">
+                    <button id="magicBtn" onclick="runAI()">MANIFEST CONTENT ✨</button>
+                    <button class="clear-btn" onclick="clearAll()">RESET UI</button>
+                </div>
+            </div>
+
+            <div class="card stats-card">
+                <div class="stat-item">
+                    <label>LATENCY</label>
+                    <div id="latency" class="val">0.00s</div>
+                </div>
+                <div class="stat-item">
+                    <label>WORDS</label>
+                    <div id="wordCount" class="val">0</div>
+                </div>
+                <div class="stat-item">
+                    <label>STATUS</label>
+                    <div id="status" class="val idle">READY</div>
+                </div>
+            </div>
+
+            <div class="card result-card">
+                <div class="card-top">
+                    <span class="badge">AI OUTPUT ARCHIVE</span>
+                    <button class="copy-btn" onclick="copyText()">COPY TEXT</button>
+                </div>
+                <div id="scrollBox">
+                    <p id="outputText">Your generated content will appear here in long-form...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function runAI() {
+            const prompt = document.getElementById('userInput').value;
+            const size = document.getElementById('textSize').value;
+            if(!prompt) return alert("Please provide a prompt for the AI to expand upon.");
+
+            const status = document.getElementById('status');
+            status.innerText = "GENERATING";
+            status.className = "val thinking";
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt, size})
+                });
+                const data = await response.json();
+                
+                document.getElementById('outputText').innerText = data.text;
+                document.getElementById('latency').innerText = data.stats;
+                document.getElementById('wordCount').innerText = data.word_count;
+                
+                status.innerText = "SUCCESS";
+                status.className = "val success";
+            } catch (e) {
+                status.innerText = "ERROR";
+                status.className = "val error";
+            }
+        }
+
+        function copyText() {
+            const text = document.getElementById('outputText').innerText;
+            navigator.clipboard.writeText(text);
+            alert("Content copied to clipboard!");
+        }
+
+        function clearAll() {
+            document.getElementById('userInput').value = "";
+            document.getElementById('outputText').innerText = "Ready for your input...";
+            document.getElementById('wordCount').innerText = "0";
+            document.getElementById('latency').innerText = "0.00s";
+            document.getElementById('status').innerText = "READY";
+            document.getElementById('status').className = "val idle";
+        }
+    </script>
+</body>
+</html>
