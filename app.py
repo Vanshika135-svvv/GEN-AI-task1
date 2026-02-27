@@ -48,7 +48,7 @@ app = Flask(__name__)
 
 # Now os.getenv will successfully find your token from the .env file
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://api-inference.huggingface.co/models/gpt2"
+API_URL = "https://router.huggingface.co/hf-inference/models/gpt2"
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
