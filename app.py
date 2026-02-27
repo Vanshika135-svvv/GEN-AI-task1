@@ -35,20 +35,20 @@
 # print("\n--- RESULT ---")
 # print(result)
 import os
-from flask import Flask, render_template, request, jsonify
-from dotenv import load_dotenv  # 1. Import the loader
 import requests
 import time
 import re
+from flask import Flask, render_template, request, jsonify
+from dotenv import load_dotenv
 
-# 2. Load the .env file into the system environment
-load_dotenv() 
+# Load local .env file
+load_dotenv()
 
 app = Flask(__name__)
 
-# Now os.getenv will successfully find your token from the .env file
+# Use the full namespace for the model to avoid 404 errors
+API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
 HF_TOKEN = os.getenv("HF_TOKEN")
-API_URL = "https://router.huggingface.co/hf-inference/models/gpt2"
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
@@ -84,16 +84,15 @@ def generate():
     }
 
     try:
-        # Remote inference call to Hugging Face servers
+        # Call the Hugging Face Router API
         response = requests.post(API_URL, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
         
-        # Extracting generated text from the API response
+        # Extract generated text
         raw_text = result[0]['generated_text'] if isinstance(result, list) else "Error."
         
         # --- SMART SENTENCE CLEANER ---
-        # Ensures output doesn't cut off mid-sentence
         if not raw_text.endswith(('.', '!', '?')):
             match = list(re.finditer(r'[.!?]', raw_text))
             if match:
@@ -114,8 +113,8 @@ def generate():
         })
 
     except Exception as e:
+        # Returns specific error message to help debug
         return jsonify({'text': f"API Error: {str(e)}", 'stats': 'Error'}), 500
 
 if __name__ == '__main__':
-    # Standard Flask entry point
     app.run()
