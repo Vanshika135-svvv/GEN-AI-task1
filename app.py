@@ -46,9 +46,10 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Use the full namespace for the model to avoid 404 errors
+# Ensure there are no extra spaces or missing slashes
 API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
 HF_TOKEN = os.getenv("HF_TOKEN")
+# Ensure 'Bearer' is followed by a single space
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
