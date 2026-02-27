@@ -40,13 +40,11 @@ import time
 import re
 import torch
 
-# Initialize the Flask app object
 app = Flask(__name__)
 
-# Load model and tokenizer
-# Vercel Note: The first request will be slow as it downloads/loads the model.
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-model = GPT2LMHeadModel.from_pretrained("gpt2")
+# Switch to distilgpt2 to fit within Vercel's 500MB limit
+tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+model = GPT2LMHeadModel.from_pretrained("distilgpt2")
 
 @app.route('/')
 def home():
@@ -59,17 +57,15 @@ def generate():
     prompt = data.get('prompt', '')
     size = data.get('size', 'medium')
 
-    # Configuration for true length depth
     config = {
-        "short": {"max": 80, "min": 30},
-        "medium": {"max": 250, "min": 100},
-        "long": {"max": 500, "min": 250} 
+        "short": {"max": 50, "min": 20},
+        "medium": {"max": 150, "min": 50},
+        "long": {"max": 300, "min": 100} 
     }
     
     sel = config.get(size, config["medium"])
     inputs = tokenizer.encode(prompt, return_tensors="pt")
 
-    # Advanced generation for long-form content
     outputs = model.generate(
         inputs, 
         max_length=sel["max"],
@@ -77,14 +73,13 @@ def generate():
         do_sample=True, 
         top_p=0.95, 
         temperature=0.85, 
-        no_repeat_ngram_size=3,    # Higher value allows more natural flow
-        repetition_penalty=1.2,    # Prevents "looping" on long text
+        no_repeat_ngram_size=3,
+        repetition_penalty=1.2,
         pad_token_id=tokenizer.eos_token_id
     )
     
     raw_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-    # --- SMART SENTENCE CLEANER ---
     if not raw_text.endswith(('.', '!', '?')):
         match = list(re.finditer(r'[.!?]', raw_text))
         if match:
@@ -104,7 +99,5 @@ def generate():
         'word_count': word_count
     })
 
-# Crucial for Vercel: Do not call app.run() globally.
-# It should only run if this file is executed directly.
 if __name__ == '__main__':
     app.run(debug=True)
