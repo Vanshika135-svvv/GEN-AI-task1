@@ -47,7 +47,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # OPTION A: DistilGPT2 (Lightweight version of GPT-2)
-API_URL = "https://router.huggingface.co/hf-inference/models/distilgpt2"
+API_URL = "https://router.huggingface.co/hf-inference/models/google/gemma-2-2b-it"
 
 # OPTION B: Gemma (More modern and reliable)
 # API_URL = "https://router.huggingface.co/hf-inference/models/google/gemma-2-2b-it"
