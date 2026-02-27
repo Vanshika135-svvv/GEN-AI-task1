@@ -1,10 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "app.py": {
-      "excludeFiles": "{static/**,assets/**,tests/**,__pycache__/**,venv/**}"
-    }
-  },
   "builds": [
     {
       "src": "app.py",

@@ -34,17 +34,22 @@
 
 # print("\n--- RESULT ---")
 # print(result)
+import os
 from flask import Flask, render_template, request, jsonify
-from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from dotenv import load_dotenv  # 1. Import the loader
+import requests
 import time
 import re
-import torch
+
+# 2. Load the .env file into the system environment
+load_dotenv() 
 
 app = Flask(__name__)
 
-# Switch to distilgpt2 to stay under the 500MB Lambda limit
-tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+# Now os.getenv will successfully find your token from the .env file
+HF_TOKEN = os.getenv("HF_TOKEN")
+API_URL = "https://api-inference.huggingface.co/models/gpt2"
+headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
 def home():
@@ -57,49 +62,60 @@ def generate():
     prompt = data.get('prompt', '')
     size = data.get('size', 'medium')
 
+    # API specific parameters for depth control
     config = {
-        "short": {"max": 50, "min": 20},
-        "medium": {"max": 150, "min": 50},
-        "long": {"max": 300, "min": 100} 
+        "short": {"max_new_tokens": 50, "repetition_penalty": 1.1},
+        "medium": {"max_new_tokens": 150, "repetition_penalty": 1.2},
+        "long": {"max_new_tokens": 250, "repetition_penalty": 1.3} 
     }
     
     sel = config.get(size, config["medium"])
-    inputs = tokenizer.encode(prompt, return_tensors="pt")
 
-    # Generate text using the lightweight model
-    outputs = model.generate(
-        inputs, 
-        max_length=sel["max"],
-        min_length=sel["min"],
-        do_sample=True, 
-        top_p=0.95, 
-        temperature=0.85, 
-        no_repeat_ngram_size=3,
-        repetition_penalty=1.2,
-        pad_token_id=tokenizer.eos_token_id
-    )
-    
-    raw_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": sel["max_new_tokens"],
+            "repetition_penalty": sel["repetition_penalty"],
+            "do_sample": True,
+            "temperature": 0.8,
+            "top_p": 0.9,
+            "return_full_text": False 
+        }
+    }
 
-    # Clean the output to ensure full sentences
-    if not raw_text.endswith(('.', '!', '?')):
-        match = list(re.finditer(r'[.!?]', raw_text))
-        if match:
-            last_index = match[-1].start()
-            clean_text = raw_text[:last_index + 1]
+    try:
+        # Remote inference call to Hugging Face servers
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Extracting generated text from the API response
+        raw_text = result[0]['generated_text'] if isinstance(result, list) else "Error."
+        
+        # --- SMART SENTENCE CLEANER ---
+        # Ensures output doesn't cut off mid-sentence
+        if not raw_text.endswith(('.', '!', '?')):
+            match = list(re.finditer(r'[.!?]', raw_text))
+            if match:
+                last_index = match[-1].start()
+                clean_text = raw_text[:last_index + 1]
+            else:
+                clean_text = raw_text
         else:
             clean_text = raw_text
-    else:
-        clean_text = raw_text
 
-    duration = round(time.time() - start_time, 2)
-    word_count = len(clean_text.split())
+        duration = round(time.time() - start_time, 2)
+        word_count = len(clean_text.split())
 
-    return jsonify({
-        'text': clean_text,
-        'stats': f"{duration}s",
-        'word_count': word_count
-    })
+        return jsonify({
+            'text': clean_text,
+            'stats': f"{duration}s",
+            'word_count': word_count
+        })
+
+    except Exception as e:
+        return jsonify({'text': f"API Error: {str(e)}", 'stats': 'Error'}), 500
 
 if __name__ == '__main__':
+    # Standard Flask entry point
     app.run()
