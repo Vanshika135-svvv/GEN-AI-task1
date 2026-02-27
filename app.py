@@ -42,7 +42,7 @@ import torch
 
 app = Flask(__name__)
 
-# Switch to distilgpt2 to fit within Vercel's 500MB limit
+# Switch to distilgpt2 to stay under the 500MB Lambda limit
 tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
 model = GPT2LMHeadModel.from_pretrained("distilgpt2")
 
@@ -66,6 +66,7 @@ def generate():
     sel = config.get(size, config["medium"])
     inputs = tokenizer.encode(prompt, return_tensors="pt")
 
+    # Generate text using the lightweight model
     outputs = model.generate(
         inputs, 
         max_length=sel["max"],
@@ -80,6 +81,7 @@ def generate():
     
     raw_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
+    # Clean the output to ensure full sentences
     if not raw_text.endswith(('.', '!', '?')):
         match = list(re.finditer(r'[.!?]', raw_text))
         if match:
@@ -100,4 +102,4 @@ def generate():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
