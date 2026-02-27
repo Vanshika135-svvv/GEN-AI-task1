@@ -40,9 +40,11 @@ import time
 import re
 import torch
 
+# Initialize the Flask app object
 app = Flask(__name__)
 
 # Load model and tokenizer
+# Vercel Note: The first request will be slow as it downloads/loads the model.
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 
@@ -58,7 +60,6 @@ def generate():
     size = data.get('size', 'medium')
 
     # Configuration for true length depth
-    # max_length: absolute ceiling | min_length: forced generation
     config = {
         "short": {"max": 80, "min": 30},
         "medium": {"max": 250, "min": 100},
@@ -84,7 +85,6 @@ def generate():
     raw_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
     # --- SMART SENTENCE CLEANER ---
-    # We only trim if the text ends abruptly without punctuation
     if not raw_text.endswith(('.', '!', '?')):
         match = list(re.finditer(r'[.!?]', raw_text))
         if match:
@@ -104,5 +104,7 @@ def generate():
         'word_count': word_count
     })
 
+# Crucial for Vercel: Do not call app.run() globally.
+# It should only run if this file is executed directly.
 if __name__ == '__main__':
     app.run(debug=True)
