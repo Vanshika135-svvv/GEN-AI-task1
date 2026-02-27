@@ -4,9 +4,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 token = os.getenv("HF_TOKEN")
-url = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
+# Try the updated URL here
+url = "https://router.huggingface.co/hf-inference/models/distilgpt2"
 headers = {"Authorization": f"Bearer {token}"}
 
-response = requests.post(url, headers=headers, json={"inputs": "The car is"})
+response = requests.post(url, headers=headers, json={"inputs": "The future of AI is"})
+
 print(f"Status Code: {response.status_code}")
-print(f"Response: {response.json()}")
+
+if response.status_code == 200:
+    print(f"Success! Response: {response.json()}")
+else:
+    print(f"Failed with error: {response.text}")
