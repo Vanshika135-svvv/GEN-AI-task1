@@ -46,10 +46,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Ensure there are no extra spaces or missing slashes
-API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
+# OPTION A: DistilGPT2 (Lightweight version of GPT-2)
+API_URL = "https://router.huggingface.co/hf-inference/models/distilgpt2"
+
+# OPTION B: Gemma (More modern and reliable)
+# API_URL = "https://router.huggingface.co/hf-inference/models/google/gemma-2-2b-it"
+
 HF_TOKEN = os.getenv("HF_TOKEN")
-# Ensure 'Bearer' is followed by a single space
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
