@@ -28,7 +28,8 @@ You can access the live version of this application here:
 
 ---
 
-GEN-AI-task1/
+
+##GEN-AI-task1/
 ├── app.py              # Flask Backend & AI Logic
 ├── static/
 │   └── style.css       # Glassmorphism Styling
