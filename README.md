@@ -1,4 +1,4 @@
-# NEO-GPT: Adaptive AI Text Generation Interface 🚀
+# NEO-GPT: Adaptive AI Text Generation Interface 
 **Task 01 - Prodigy InfoTech Internship**
 
 Neo-GPT is a professional-grade web application that leverages the **GPT-2 Large Language Model** to generate intelligent, long-form text. It features a modern Glassmorphic Bento UI, providing a high-end user experience with real-time performance metrics.
@@ -28,8 +28,8 @@ You can access the live version of this application here:
 
 ---
 
-
-##GEN-AI-task1/
+---
+## GEN-AI-task1/
 ├── app.py              # Flask Backend & AI Logic
 ├── static/
 │   └── style.css       # Glassmorphism Styling
@@ -37,3 +37,4 @@ You can access the live version of this application here:
 │   └── index.html      # Responsive Bento UI
 ├── requirements.txt    # Project Dependencies
 └── README.md           # Documentation
+---
