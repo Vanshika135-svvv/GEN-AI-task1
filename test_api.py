@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 token = os.getenv("HF_TOKEN")
 # Try the updated URL here
-url = "https://router.huggingface.co/hf-inference/models/Qwen/Qwen3.5-35B-A3B"
+url = "https://router.huggingface.co/zai-org/GLM-5"
 headers = {"Authorization": f"Bearer {token}"}
 
 response = requests.post(url, headers=headers, json={"inputs": "The future of AI is"})
