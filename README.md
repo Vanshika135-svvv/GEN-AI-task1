@@ -35,12 +35,19 @@ You can access the live version of this application here:
 
 ## GEN-AI-task1/
 
-├── app.py # Flask Backend & AI Logic
+├── app.py         # Flask Backend & AI Logic
+
+
 ├── static/
-│ └── style.css # Glassmorphism Styling
+
+│ └── style.css    # Glassmorphism Styling
+
 ├── templates/
-│ └── index.html # Responsive Bento UI
+
+│ └── index.html   # Responsive Bento UI
+
 ├── requirements.txt # Project Dependencies
-└── README.md # Documentation
+
+└── README.md   # Documentation
 
 ---
