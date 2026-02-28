@@ -45,7 +45,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Correct 2026 Router URL
-API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
+API_URL = "https://router.huggingface.co/hf-inference/models/HuggingFaceTB/SmolLM2-135M-Instruct" 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 @app.route('/')
