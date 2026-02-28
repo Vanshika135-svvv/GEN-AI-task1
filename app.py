@@ -35,18 +35,23 @@
 # print("\n--- RESULT ---")
 # print(result)
 import os
-import requests
 import time
 from flask import Flask, render_template, request, jsonify
+from openai import OpenAI
 from dotenv import load_dotenv
 
+# Load local .env file
 load_dotenv()
+
 app = Flask(__name__)
 
-# --- 2026 PRODUCTION CONFIGURATION ---
-# Switching to SmolLM2 because legacy GPT-2 often returns 404 on the new router
-API_URL = "https://router.huggingface.co/hf-inference/models/HuggingFaceTB/SmolLM2-135M-Instruct"
+# --- 2026 ROUTER CONFIGURATION ---
+# Initialize the OpenAI-compatible client for Hugging Face
 HF_TOKEN = os.getenv("HF_TOKEN")
+client = OpenAI(
+    base_url="https://router.huggingface.co/v1",
+    api_key=HF_TOKEN,
+)
 
 @app.route('/')
 def home():
@@ -54,47 +59,43 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    # DEBUG: Logs token status to Vercel/Local terminal
-    if HF_TOKEN:
-        print(f"DEBUG: Token Active ({HF_TOKEN[:5]}...)") 
-    else:
-        print("DEBUG: TOKEN IS MISSING!")
-
+    # Safety Check: Ensure token is present
     if not HF_TOKEN:
-        return jsonify({'text': "Auth Error: HF_TOKEN missing in settings.", 'stats': 'Error'}), 500
+        return jsonify({'text': "Error: HF_TOKEN missing in Vercel Settings.", 'stats': 'Config Error'}), 500
 
     start_time = time.time()
-    data = request.json
-    prompt = data.get('prompt', '')
-    
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 100, "do_sample": True, "temperature": 0.7}
-    }
+    user_data = request.json
+    user_prompt = user_data.get('prompt', '')
 
     try:
-        response = requests.post(API_URL, headers=headers, json=payload)
+        # Use the specific model and syntax you provided
+        completion = client.chat.completions.create(
+            model="Nanbeige/Nanbeige4.1-3B:featherless-ai",
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            max_tokens=150 # Limits response length for the UI
+        )
+
+        # Extract the generated message content
+        raw_text = completion.choices[0].message.content
         
-        # If API returns 404, it means this model isn't on the router's active list
-        if response.status_code != 200:
-            return jsonify({'text': f"API Error {response.status_code}: {response.text}", 'stats': 'Fail'}), 200
-            
-        result = response.json()
-        
-        # Extract text safely
-        if isinstance(result, list) and len(result) > 0:
-            raw_text = result[0].get('generated_text', 'No text generated.')
-        else:
-            raw_text = result.get('generated_text', 'No text generated.')
+        duration = round(time.time() - start_time, 2)
+        word_count = len(raw_text.split())
 
         return jsonify({
             'text': raw_text,
-            'stats': f"{round(time.time() - start_time, 2)}s",
-            'word_count': len(raw_text.split())
+            'stats': f"{duration}s",
+            'word_count': word_count
         })
+
     except Exception as e:
-        return jsonify({'text': f"System Error: {str(e)}", 'stats': 'Crash'}), 500
+        # Catch errors like "Invalid API Key" or "Model Not Found"
+        print(f"ERROR: {str(e)}")
+        return jsonify({'text': f"API Error: {str(e)}", 'stats': 'Fail'}), 200
 
 if __name__ == '__main__':
     app.run()
