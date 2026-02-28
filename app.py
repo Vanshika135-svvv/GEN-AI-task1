@@ -46,11 +46,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# OPTION A: DistilGPT2 (Lightweight version of GPT-2)
+# Verified URL for the standard GPT-2 model on the new router
 API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
-
-# OPTION B: Gemma (More modern and reliable)
-# API_URL = "https://router.huggingface.co/hf-inference/models/google/gemma-2-2b-it"
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
@@ -66,7 +63,6 @@ def generate():
     prompt = data.get('prompt', '')
     size = data.get('size', 'medium')
 
-    # API specific parameters for depth control
     config = {
         "short": {"max_new_tokens": 50, "repetition_penalty": 1.1},
         "medium": {"max_new_tokens": 150, "repetition_penalty": 1.2},
@@ -90,6 +86,13 @@ def generate():
     try:
         # Call the Hugging Face Router API
         response = requests.post(API_URL, headers=headers, json=payload)
+        
+        # --- DEBUG LOGGING ---
+        # If the API fails, this will show the specific reason in your local terminal
+        if response.status_code != 200:
+            print(f"API Error Status: {response.status_code}")
+            print(f"API Error Message: {response.text}")
+            
         response.raise_for_status()
         result = response.json()
         
@@ -117,8 +120,10 @@ def generate():
         })
 
     except Exception as e:
-        # Returns specific error message to help debug
-        return jsonify({'text': f"API Error: {str(e)}", 'stats': 'Error'}), 500
+        # Prints the full crash reason to your terminal to help identify if 
+        # it is a timeout, token issue, or URL issue
+        print(f"CRASH LOG: {str(e)}")
+        return jsonify({'text': f"Server Error: {str(e)}", 'stats': 'Error'}), 500
 
 if __name__ == '__main__':
     app.run()
