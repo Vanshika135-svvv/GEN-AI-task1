@@ -41,16 +41,11 @@ import re
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
-# Load environment variables (safely ignores missing .env on Vercel)
 load_dotenv()
-
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
-# We use the verified full namespace for GPT-2
+# This is the modern 2026 router URL
 API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
-
-# Retrieve token from Environment Variables
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 @app.route('/')
@@ -59,82 +54,37 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    # --- SAFETY CHECK 1: CHECK TOKEN ---
     if not HF_TOKEN:
-        return jsonify({
-            'text': "Configuration Error: HF_TOKEN is missing. Please add it to Vercel Settings.",
-            'stats': 'Config Error'
-        }), 500
+        return jsonify({'text': "Auth Error: HF_TOKEN missing in Environment Variables.", 'stats': 'Error'}), 500
 
     start_time = time.time()
     data = request.json
     prompt = data.get('prompt', '')
-    size = data.get('size', 'medium')
-
-    # Define generation parameters
-    config = {
-        "short": {"max_new_tokens": 50},
-        "medium": {"max_new_tokens": 150},
-        "long": {"max_new_tokens": 250} 
-    }
-    sel = config.get(size, config["medium"])
-
+    
+    # Critical: The Authorization header must be exactly "Bearer <token>"
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     payload = {
         "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": sel["max_new_tokens"],
-            "return_full_text": False,
-            "do_sample": True,
-            "temperature": 0.8
-        }
+        "parameters": {"max_new_tokens": 150, "do_sample": True, "return_full_text": False}
     }
 
     try:
-        # --- API CALL ---
         response = requests.post(API_URL, headers=headers, json=payload)
         
-        # --- SAFETY CHECK 2: HANDLE API ERRORS ---
+        # If you see "Invalid username or password" here, your HF_TOKEN is wrong
         if response.status_code != 200:
-            error_msg = f"API Error {response.status_code}: {response.text}"
-            print(error_msg) # Logs to Vercel Console
-            return jsonify({'text': error_msg, 'stats': 'API Fail'}), response.status_code
+            return jsonify({'text': f"API Error {response.status_code}: {response.text}", 'stats': 'Fail'}), 200
             
         result = response.json()
-        
-        # Handle list or dict response format
-        if isinstance(result, list) and len(result) > 0:
-            raw_text = result[0].get('generated_text', '')
-        elif isinstance(result, dict):
-            raw_text = result.get('generated_text', '')
-        else:
-            raw_text = "No text returned."
-
-        # --- SMART CLEANER ---
-        # Ensures text ends with punctuation
-        if raw_text and not raw_text.endswith(('.', '!', '?')):
-            match = list(re.finditer(r'[.!?]', raw_text))
-            if match:
-                last_index = match[-1].start()
-                clean_text = raw_text[:last_index + 1]
-            else:
-                clean_text = raw_text
-        else:
-            clean_text = raw_text
-
-        duration = round(time.time() - start_time, 2)
-        word_count = len(clean_text.split())
+        raw_text = result[0].get('generated_text', '') if isinstance(result, list) else result.get('generated_text', '')
 
         return jsonify({
-            'text': clean_text,
-            'stats': f"{duration}s",
-            'word_count': word_count
+            'text': raw_text,
+            'stats': f"{round(time.time() - start_time, 2)}s",
+            'word_count': len(raw_text.split())
         })
-
     except Exception as e:
-        # Catch unexpected crashes and return them as JSON
-        print(f"CRASH: {str(e)}")
-        return jsonify({'text': f"Server Crash: {str(e)}", 'stats': 'Crash'}), 500
+        return jsonify({'text': f"System Error: {str(e)}", 'stats': 'Crash'}), 500
 
 if __name__ == '__main__':
     app.run()
