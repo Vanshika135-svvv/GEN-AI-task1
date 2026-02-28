@@ -40,13 +40,10 @@ from flask import Flask, render_template, request, jsonify
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Load local .env file
 load_dotenv()
-
 app = Flask(__name__)
 
-# --- 2026 ROUTER CONFIGURATION ---
-# Initialize the OpenAI-compatible client for Hugging Face
+# Initialize OpenAI client for Hugging Face Router
 HF_TOKEN = os.getenv("HF_TOKEN")
 client = OpenAI(
     base_url="https://router.huggingface.co/v1",
@@ -59,43 +56,61 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    # Safety Check: Ensure token is present
     if not HF_TOKEN:
-        return jsonify({'text': "Error: HF_TOKEN missing in Vercel Settings.", 'stats': 'Config Error'}), 500
+        return jsonify({'text': "Auth Error: HF_TOKEN missing.", 'stats': 'Error'}), 500
 
     start_time = time.time()
     user_data = request.json
     user_prompt = user_data.get('prompt', '')
+    
+    # Logic to handle the "Long (Deep Generation)" dropdown from your UI
+    generation_size = user_data.get('size', 'medium')
+    
+    # Map UI selection to token limits
+    # Nanbeige 4.1-3B supports larger contexts for detailed studies
+    token_limits = {
+        "short": 150,
+        "medium": 500,
+        "long": 1500  # High limit for "Detailed Study" requests
+    }
+    max_tokens = token_limits.get(generation_size, 500)
 
     try:
-        # Use the specific model and syntax you provided
         completion = client.chat.completions.create(
             model="Nanbeige/Nanbeige4.1-3B:featherless-ai",
             messages=[
+                {
+                    "role": "system", 
+                    "content": "You are a highly detailed AI research assistant. Provide comprehensive, structured studies."
+                },
                 {
                     "role": "user",
                     "content": user_prompt
                 }
             ],
-            max_tokens=150 # Limits response length for the UI
+            max_tokens=max_tokens,
+            temperature=0.8,  # Higher creativity for long-form content
+            top_p=0.95
         )
 
-        # Extract the generated message content
         raw_text = completion.choices[0].message.content
         
+        # Clean up <think> tags if you don't want the internal reasoning in your UI
+        # clean_text = re.sub(r'<think>.*?</think>', '', raw_text, flags=re.DOTALL).strip()
+        clean_text = raw_text 
+
         duration = round(time.time() - start_time, 2)
-        word_count = len(raw_text.split())
+        word_count = len(clean_text.split())
 
         return jsonify({
-            'text': raw_text,
+            'text': clean_text,
             'stats': f"{duration}s",
             'word_count': word_count
         })
 
     except Exception as e:
-        # Catch errors like "Invalid API Key" or "Model Not Found"
         print(f"ERROR: {str(e)}")
-        return jsonify({'text': f"API Error: {str(e)}", 'stats': 'Fail'}), 200
+        return jsonify({'text': f"Generation Error: {str(e)}", 'stats': 'Fail'}), 200
 
 if __name__ == '__main__':
     app.run()
