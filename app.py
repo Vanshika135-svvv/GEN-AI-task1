@@ -41,16 +41,17 @@ import re
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
-# Load local .env file
+# Load environment variables (safely ignores missing .env on Vercel)
 load_dotenv()
 
 app = Flask(__name__)
 
-# Verified URL for the standard GPT-2 model on the new router
+# --- CONFIGURATION ---
+# We use the verified full namespace for GPT-2
 API_URL = "https://router.huggingface.co/hf-inference/models/openai-community/gpt2"
 
+# Retrieve token from Environment Variables
 HF_TOKEN = os.getenv("HF_TOKEN")
-headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
 @app.route('/')
 def home():
@@ -58,49 +59,60 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    # --- SAFETY CHECK 1: CHECK TOKEN ---
+    if not HF_TOKEN:
+        return jsonify({
+            'text': "Configuration Error: HF_TOKEN is missing. Please add it to Vercel Settings.",
+            'stats': 'Config Error'
+        }), 500
+
     start_time = time.time()
     data = request.json
     prompt = data.get('prompt', '')
     size = data.get('size', 'medium')
 
+    # Define generation parameters
     config = {
-        "short": {"max_new_tokens": 50, "repetition_penalty": 1.1},
-        "medium": {"max_new_tokens": 150, "repetition_penalty": 1.2},
-        "long": {"max_new_tokens": 250, "repetition_penalty": 1.3} 
+        "short": {"max_new_tokens": 50},
+        "medium": {"max_new_tokens": 150},
+        "long": {"max_new_tokens": 250} 
     }
-    
     sel = config.get(size, config["medium"])
 
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     payload = {
         "inputs": prompt,
         "parameters": {
             "max_new_tokens": sel["max_new_tokens"],
-            "repetition_penalty": sel["repetition_penalty"],
+            "return_full_text": False,
             "do_sample": True,
-            "temperature": 0.8,
-            "top_p": 0.9,
-            "return_full_text": False 
+            "temperature": 0.8
         }
     }
 
     try:
-        # Call the Hugging Face Router API
+        # --- API CALL ---
         response = requests.post(API_URL, headers=headers, json=payload)
         
-        # --- DEBUG LOGGING ---
-        # If the API fails, this will show the specific reason in your local terminal
+        # --- SAFETY CHECK 2: HANDLE API ERRORS ---
         if response.status_code != 200:
-            print(f"API Error Status: {response.status_code}")
-            print(f"API Error Message: {response.text}")
+            error_msg = f"API Error {response.status_code}: {response.text}"
+            print(error_msg) # Logs to Vercel Console
+            return jsonify({'text': error_msg, 'stats': 'API Fail'}), response.status_code
             
-        response.raise_for_status()
         result = response.json()
         
-        # Extract generated text
-        raw_text = result[0]['generated_text'] if isinstance(result, list) else "Error."
-        
-        # --- SMART SENTENCE CLEANER ---
-        if not raw_text.endswith(('.', '!', '?')):
+        # Handle list or dict response format
+        if isinstance(result, list) and len(result) > 0:
+            raw_text = result[0].get('generated_text', '')
+        elif isinstance(result, dict):
+            raw_text = result.get('generated_text', '')
+        else:
+            raw_text = "No text returned."
+
+        # --- SMART CLEANER ---
+        # Ensures text ends with punctuation
+        if raw_text and not raw_text.endswith(('.', '!', '?')):
             match = list(re.finditer(r'[.!?]', raw_text))
             if match:
                 last_index = match[-1].start()
@@ -120,10 +132,9 @@ def generate():
         })
 
     except Exception as e:
-        # Prints the full crash reason to your terminal to help identify if 
-        # it is a timeout, token issue, or URL issue
-        print(f"CRASH LOG: {str(e)}")
-        return jsonify({'text': f"Server Error: {str(e)}", 'stats': 'Error'}), 500
+        # Catch unexpected crashes and return them as JSON
+        print(f"CRASH: {str(e)}")
+        return jsonify({'text': f"Server Crash: {str(e)}", 'stats': 'Crash'}), 500
 
 if __name__ == '__main__':
     app.run()
