@@ -54,6 +54,13 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    # --- TEMPORARY DEBUG LINE ---
+    # This safely logs the start and end of your token to the Vercel/Local terminal
+    if HF_TOKEN:
+        print(f"DEBUG: Token starts with: {HF_TOKEN[:5]}... and ends with ...{HF_TOKEN[-3:]}")
+    else:
+        print("DEBUG: HF_TOKEN is None!")
+
     if not HF_TOKEN:
         return jsonify({'text': "Auth Error: HF_TOKEN missing in Environment Variables.", 'stats': 'Error'}), 500
 
@@ -71,8 +78,10 @@ def generate():
     try:
         response = requests.post(API_URL, headers=headers, json=payload)
         
-        # If you see "Invalid username or password" here, your HF_TOKEN is wrong
+        # If the API fails, this will now show the specific reason in your logs
         if response.status_code != 200:
+            print(f"API Error Status: {response.status_code}")
+            print(f"API Error Message: {response.text}")
             return jsonify({'text': f"API Error {response.status_code}: {response.text}", 'stats': 'Fail'}), 200
             
         result = response.json()
@@ -84,6 +93,7 @@ def generate():
             'word_count': len(raw_text.split())
         })
     except Exception as e:
+        print(f"CRASH LOG: {str(e)}") # Detailed crash info for Vercel Logs
         return jsonify({'text': f"System Error: {str(e)}", 'stats': 'Crash'}), 500
 
 if __name__ == '__main__':
