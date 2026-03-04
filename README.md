@@ -10,7 +10,7 @@ Neo-GPT is a professional-grade web application that leverages the **GPT-2 Large
 
 You can access the live version of this application here:
 
-> **[View Live Demo](ADD_YOUR_VERCEL_PUBLIC_LINK_HERE)**
+> **[View Live Demo](https://gen-ai-task1-i77yv4078-vanshika135-svvvs-projects.vercel.app?_vercel_share=SRHgPG9xyllCAKzIGtCsCtEVaD7UNpTF)**
 
 ---
 
