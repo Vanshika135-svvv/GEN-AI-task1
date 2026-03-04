@@ -32,22 +32,14 @@ You can access the live version of this application here:
 - **Deployment:** Vercel / GitHub Actions
 
 ---
-
-## GEN-AI-task1/
-
+### 📂 Project Structure GEN-AI-task1/
+```text
 ├── app.py         # Flask Backend & AI Logic
-
-
 ├── static/
-
 │ └── style.css    # Glassmorphism Styling
-
 ├── templates/
-
-│ └── index.html   # Responsive Bento UI
-
+│ └── index.html    # Responsive Bento UI
 ├── requirements.txt # Project Dependencies
-
 └── README.md   # Documentation
-
+```
 ---
